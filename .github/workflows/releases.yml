@@ -7,13 +7,16 @@ on:
 jobs:
   changelog:
     runs-on: ubuntu-latest
+    if: ${{ secrets.PA_TOKEN != '' }}
+    permissions:
+      contents: write
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: conventional Changelog Action
         id: changelog
-        uses: TriPSs/conventional-changelog-action@v3.7.1
+        uses: TriPSs/conventional-changelog-action@v5
         with:
           github-token: ${{ secrets.PA_TOKEN }}
           version-file: './releases.json,./package.json,./package-lock.json'
