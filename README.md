@@ -1,229 +1,102 @@
-# Learn Next.js
+# Learn Next.js 🚀
 
-This repository contains a comprehensive list of resources, guides, architecture deep-dives, code examples, design patterns, testing strategies, and best practices to help you learn Next.js from scratch to advanced production full-stack development.
+<div align="center">
 
-![npm](https://img.shields.io/npm/dw/learn-nextjs)
-![npm](https://img.shields.io/npm/dm/learn-nextjs)
-![npm](https://img.shields.io/npm/dy/learn-nextjs)
-![npm](https://img.shields.io/npm/dt/learn-nextjs)
-![GitHub issues](https://img.shields.io/github/issues/manthanank/learn-nextjs)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/manthanank/learn-nextjs)
-![GitHub](https://img.shields.io/github/license/manthanank/learn-nextjs)
-![GitHub last commit](https://img.shields.io/github/last-commit/manthanank/learn-nextjs)
-![GitHub top language](https://img.shields.io/github/languages/top/manthanank/learn-nextjs)
-![GitHub repo size](https://img.shields.io/github/repo-size/manthanank/learn-nextjs)
-![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/manthanank/learn-nextjs)
-![GitHub contributors](https://img.shields.io/github/contributors/manthanank/learn-nextjs)
-![GitHub forks](https://img.shields.io/github/forks/manthanank/learn-nextjs)
-![GitHub stars](https://img.shields.io/github/stars/manthanank/learn-nextjs)
-![GitHub watchers](https://img.shields.io/github/watchers/manthanank/learn-nextjs)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Next.js Version](https://img.shields.io/badge/Next.js-15.2+-black.svg?logo=next.js)](https://nextjs.org/)
+[![React Version](https://img.shields.io/badge/React-19-blue.svg?logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7+-blue.svg?logo=typescript)](https://www.typescriptlang.org/)
+[![Tested with Vitest](https://img.shields.io/badge/Tested%20with-Vitest-yellow.svg?logo=vitest)](https://vitest.dev/)
+[![Production Ready](https://img.shields.io/badge/Status-Enterprise%20Grade-brightgreen.svg)](https://github.com/manthanank/learn-nextjs)
+
+**An exhaustive, production-grade masterclass from absolute zero to staff-level full-stack web engineering with Next.js 15 & React 19.**  
+Master the App Router, React Server Components (RSC), Server Actions, Partial Prerendering (PPR), Turbopack, Prisma/Drizzle ORMs, caching hierarchies, and enterprise deployment.
+
+[Getting Started](#-getting-started) • [App Router](#2-stage-2-app-router-rendering-modes--navigation) • [Server Components](#3-stage-3-react-server-components-rsc--server-actions) • [ORMs & State](#4-stage-4-enterprise-state-styling-prisma--drizzle-orm) • [Caching & Security](#5-stage-5-caching-hierarchies-partial-prerendering-ppr--security) • [Interview Prep](#7-stage-7-staff-full-stack-interview-handbook--production-cheatsheet)
+
+<br/>
+
+<a href="https://www.buymeacoffee.com/manthanank">
+  <img src="public/bmc-button.svg" alt="Buy Me A Coffee" width="180">
+</a>
+
+</div>
+
+---
+
+## 🗺️ 7-Stage Pedagogical Roadmap
+
+```mermaid
+flowchart LR
+    S1["Stage 1: Foundations & React Essentials"] --> S2["Stage 2: App Router & Rendering"]
+    S2 --> S3["Stage 3: Server Components & Actions"]
+    S3 --> S4["Stage 4: ORMs, DB & Auth"]
+    S4 --> S5["Stage 5: Caching & PPR"]
+    S5 --> S6["Stage 6: Testing & Containerization"]
+    S6 --> S7["Stage 7: Staff Interview Handbook"]
+```
+
+| Stage | Focus Domain | Core Concepts & Engineering Outcomes |
+| :--- | :--- | :--- |
+| **Stage 1** | **Absolute Beginner Foundations** | Next.js 15 App Router vs Pages Router, Turbopack, React 19 essentials, project architecture. |
+| **Stage 2** | **App Router & Rendering Modes** | File-system conventions (`page`, `layout`, `loading`, `error`), SSG, SSR, ISR, dynamic routes, navigation. |
+| **Stage 3** | **RSC & Server Actions** | React Server Component streaming payload (`react-server-dom-webpack`), `'use client'`, Server Actions, Zod forms. |
+| **Stage 4** | **Enterprise Databases & Auth** | Auth.js / Better Auth, Prisma & Drizzle ORM, connection pooling, Tailwind CSS & shadcn/ui. |
+| **Stage 5** | **Caching & Partial Prerendering** | 4-layer caching pipeline, on-demand `revalidateTag`, Partial Prerendering (PPR), CSP security headers. |
+| **Stage 6** | **Automated Testing & DevOps** | Unit/integration testing with Vitest, Playwright E2E, Docker multi-stage builds, Vercel & Nginx edge proxies. |
+| **Stage 7** | **Staff Full-Stack Interview Handbook** | Hydration mismatches, RSC wire protocol, memory profiling, 35+ staff-level interview Q&As, cheat sheet. |
 
 ---
 
-## Table of Contents
 
-- [Introduction](#introduction)
-  - [What is Next.js?](#what-is-nextjs)
-  - [Features](#features)
-  - [Why Next.js?](#why-nextjs)
-  - [Architecture](#architecture)
-  - [Rendering Modes](#rendering-modes)
-  - [Version History](#version-history)
-  - [App Router vs Pages Router](#app-router-vs-pages-router)
-  - [Project Structure](#project-structure)
 
-- [React Essentials](#react-essentials)
-  - [JSX](#jsx)
-  - [Components](#components)
-  - [Props](#props)
-  - [State](#state)
-  - [Events](#events)
-  - [Conditional Rendering](#conditional-rendering)
-  - [Lists](#lists)
-  - [Forms](#forms)
-  - [Hooks](#hooks)
-  - [Context API](#context-api)
+## 1. Stage 1: Absolute Beginner Foundations & React Essentials
 
-- [JavaScript & TypeScript](#javascript--typescript)
-  - [ES6+](#es6)
-  - [Modules](#modules)
-  - [Async/Await & Promises](#asyncawait--promises)
-  - [Types & Interfaces](#types--interfaces)
-  - [Enums](#enums)
-  - [Generics](#generics)
-  - [Utility Types](#utility-types)
+### 1.1 Introduction to Next.js 15
+```mermaid
+flowchart TD
+    Client["Client Browser"] --> EdgeEdge["Edge Network / CDN"]
+    EdgeEdge --> Middleware["Edge Middleware (middleware.ts)"]
+    Middleware --> AppRouter["App Router Controller"]
+    AppRouter --> RSC["React Server Components (Node/Edge Runtime)"]
+    RSC --> Flight["Generate RSC Flight Protocol Data Stream"]
+    Flight --> Stream["Stream HTML + Flight Chunks to Client"]
+    Stream --> Hydrate["Client Browser Hydrates 'use client' Islands"]
+```
 
-- [Project Setup](#project-setup)
-  - [Installation & create-next-app](#installation--create-next-app)
-  - [Turbopack](#turbopack)
-  - [Package Managers](#package-managers)
-  - [Folder Structure & Configuration](#folder-structure--configuration)
+### Line-by-Line Code Breakdown: Modern Root Layout (`app/layout.tsx`)
 
-- [Routing (App Router)](#routing-app-router)
-  - [app Directory](#app-directory)
-  - [layout.tsx](#layouttsx)
-  - [page.tsx](#pagetsx)
-  - [loading.tsx](#loadingtsx)
-  - [error.tsx](#errortsx)
-  - [global-error.tsx](#global-errortsx)
-  - [not-found.tsx](#not-foundtsx)
-  - [route.ts](#routets)
-  - [Nested Routes](#nested-routes)
-  - [Dynamic Routes](#dynamic-routes)
-  - [Catch-all Routes](#catch-all-routes)
-  - [Optional Catch-all Routes](#optional-catch-all-routes)
-  - [Route Groups](#route-groups)
-  - [Parallel Routes](#parallel-routes)
-  - [Intercepting Routes](#intercepting-routes)
+```typescript
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
 
-- [Components](#components-1)
-  - [Server Components](#server-components)
-  - [Client Components](#client-components)
-  - [Shared Components](#shared-components)
-  - [Layouts vs Templates](#layouts-vs-templates)
-  - [Metadata API](#metadata-api)
+const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
-- [Rendering](#rendering)
-  - [Static Rendering (SSG)](#static-rendering-ssg)
-  - [Server-Side Rendering (SSR)](#server-side-rendering-ssr)
-  - [Client-Side Rendering (CSR)](#client-side-rendering-csr)
-  - [Incremental Static Regeneration (ISR)](#incremental-static-regeneration-isr)
-  - [Partial Prerendering (PPR)](#partial-prerendering-ppr)
-  - [Streaming](#streaming)
-  - [Edge vs Node Runtime](#edge-vs-node-runtime)
+export const metadata: Metadata = {
+  title: { template: '%s | Enterprise Hub', default: 'Enterprise Hub' },
+  description: 'Production full-stack web platform built with Next.js 15.'
+};
 
-- [Data Fetching](#data-fetching)
-  - [fetch() in Next.js](#fetch-in-nextjs)
-  - [Server Fetching vs Client Fetching](#server-fetching-vs-client-fetching)
-  - [Async Components](#async-components)
-  - [cache() and unstable_cache()](#cache-and-unstable_cache)
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" className={inter.className}>
+      <body>
+        <main id="root-portal">{children}</main>
+      </body>
+    </html>
+  );
+}
+```
 
-- [React Server Components](#react-server-components)
-  - [Introduction](#introduction-1)
-  - [Benefits](#benefits)
-  - [Limitations](#limitations)
-  - [Composition Patterns](#composition-patterns)
-  - [Best Practices](#best-practices)
+| Line / Statement | Architectural Component | Pedagogical Runtime Purpose |
+| :--- | :--- | :--- |
+| `import type { Metadata } from 'next'` | **Type Definition** | Imports type definition for static and dynamic metadata export. Stripped at compile time. |
+| `const inter = Inter({ ... })` | **Font Optimization (`next/font`)** | Self-hosts Google Fonts locally at build time, eliminating external render-blocking font network requests and zero layout shifts. |
+| `export const metadata: Metadata` | **Metadata API** | Statically hoisted to the document `<head>`, generating `<title>`, `<meta name="description">`, and OpenGraph tags automatically. |
+| `RootLayout({ children })` | **Root Server Component** | Wraps every route in the application. Preserves client state across page navigations without full document unmounting. |
+| `{children}` | **Route Projection Slot** | Nested route pages (`app/page.tsx`, `app/dashboard/page.tsx`) are projected inside this slot by the App Router reconciler. |
 
-- [Client Components](#client-components-1)
-  - ['use client' Directive](#use-client-directive)
-  - [Browser APIs & Side Effects](#browser-apis--side-effects)
-
-- [Navigation](#navigation)
-  - [Link Component](#link-component)
-  - [useRouter()](#userouter)
-  - [redirect() and permanentRedirect()](#redirect-and-permanentredirect)
-  - [notFound()](#notfound)
-
-- [Server Actions](#server-actions)
-  - [Forms & Mutations](#forms--mutations)
-  - [Optimistic Updates](#optimistic-updates)
-
-- [Forms](#forms-1)
-  - [React Hook Form & Zod Validation](#react-hook-form--zod-validation)
-
-- [API Routes](#api-routes)
-  - [Route Handlers](#route-handlers)
-
-- [Middleware](#middleware)
-
-- [Authentication](#authentication)
-  - [Auth.js (NextAuth.js)](#authjs-nextauthjs)
-  - [Better Auth](#better-auth)
-
-- [Authorization](#authorization)
-  - [Role-Based Access Control (RBAC)](#role-based-access-control-rbac)
-
-- [Database & ORM](#database--orm)
-  - [Prisma ORM](#prisma-orm)
-  - [Drizzle ORM](#drizzle-orm)
-
-- [State Management](#state-management)
-
-- [Styling & UI Libraries](#styling--ui-libraries)
-  - [Tailwind CSS & shadcn/ui](#tailwind-css--shadcnui)
-
-- [Images](#images)
-  - [next/image](#nextimage)
-
-- [Fonts](#fonts)
-  - [next/font](#nextfont)
-
-- [Metadata](#metadata)
-
-- [Internationalization (i18n)](#internationalization-i18n)
-
-- [Caching](#caching)
-  - [Cache Tags & On-Demand Revalidation](#cache-tags--on-demand-revalidation)
-
-- [Performance](#performance)
-  - [Turbopack](#turbopack-1)
-  - [Dynamic Imports & Lazy Loading](#dynamic-imports--lazy-loading)
-
-- [Security](#security)
-
-- [Environment Variables](#environment-variables)
-
-- [File Upload](#file-upload)
-
-- [Emails](#emails)
-
-- [Realtime](#realtime)
-
-- [Background Jobs](#background-jobs)
-
-- [Payments](#payments)
-
-- [AI Integration](#ai-integration)
-
-- [Analytics](#analytics)
-
-- [Testing](#testing)
-  - [Unit and Component Testing with Vitest](#unit-and-component-testing-with-vitest)
-  - [End-to-End Testing with Playwright](#end-to-end-testing-with-playwright)
-
-- [Deployment](#deployment)
-  - [Vercel Deployment](#vercel-deployment)
-  - [Docker Deployment](#docker-deployment)
-  - [Nginx Reverse Proxy](#nginx-reverse-proxy)
-
-- [Best Practices](#best-practices-1)
-
-- [Design Patterns](#design-patterns)
-  - [Repository & Service Layer Pattern](#repository--service-layer-pattern)
-
-- [Common Libraries](#common-libraries)
-
-- [Example Projects](#example-projects)
-  - [Todo App with Server Actions](#todo-app-with-server-actions)
-  - [CRUD App](#crud-app)
-  - [Authentication Starter](#authentication-starter)
-  - [Dashboard with Streaming & Suspense](#dashboard-with-streaming--suspense)
-  - [E-commerce Store](#e-commerce-store)
-  - [AI Chat Application](#ai-chat-application)
-  - [SaaS Starter, Blog Platform & Social Media Clone](#saas-starter-blog-platform--social-media-clone)
-
-- [Interview Questions](#interview-questions)
-  - [Next.js Interview Questions](#nextjs-interview-questions)
-
-- [Cheat Sheets](#cheat-sheets)
-  - [CLI Commands Cheat Sheet](#cli-commands-cheat-sheet)
-  - [Routing Cheat Sheet](#routing-cheat-sheet)
-  - [Data Fetching Cheat Sheet](#data-fetching-cheat-sheet)
-
-- [Resources](#resources)
-  - [Official Documentation](#official-documentation)
-  - [Next.js Roadmap](#nextjs-roadmap)
-  - [Community Resources](#community-resources)
-
-- [Contributing](#contributing)
-- [License](#license)
-- [Acknowledgments](#acknowledgments)
-- [Connect with me](#connect-with-me)
-- [Support](#support)
-
----
-## Introduction
 
 ### What is Next.js?
 
@@ -716,9 +589,27 @@ Key configuration files:
 - `.env.local`: Local secret environment variables (never commit to git).
 
 [Back to top⤴️](#table-of-contents)
+
+
+
 ---
 
-## Routing (App Router)
+## 2. Stage 2: App Router, Rendering Modes & Navigation
+```mermaid
+flowchart TD
+    subgraph RoutingHierarchy["App Router File Hierarchy"]
+        Layout["layout.tsx (Shared Shell, Persistent State)"]
+        Template["template.tsx (Remounted on Navigation)"]
+        Loading["loading.tsx (Instant React Suspense Boundary)"]
+        Error["error.tsx ('use client' Error Boundary)"]
+        Page["page.tsx (Unique Route Leaf Content)"]
+    end
+    Layout --> Template
+    Template --> Loading
+    Loading --> Error
+    Error --> Page
+```
+
 
 The Next.js App Router relies on a file-system hierarchy inside the `app` directory to define routes and UI layouts.
 
@@ -1219,9 +1110,29 @@ export const getUser = cache(async (userId: string) => {
 ```
 
 [Back to top⤴️](#table-of-contents)
+
+
+
 ---
 
-## React Server Components
+## 3. Stage 3: React Server Components (RSC) & Server Actions
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Browser as Client Browser ('use client')
+    participant Action as Server Action ('use server')
+    participant DB as Postgres Database (Prisma)
+    participant Cache as Next.js Data Cache
+
+    Browser->>Action: POST FormData (Form Submission)
+    Note over Action: Validates payload using Zod schema
+    Action->>DB: INSERT INTO users VALUES (...)
+    DB-->>Action: Record Created
+    Action->>Cache: revalidateTag('users-list')
+    Action-->>Browser: Return { success: true, user }
+    Note over Browser: React re-renders with fresh Server Component stream
+```
+
 
 ### Introduction
 
@@ -1592,9 +1503,12 @@ export const config = {
 ```
 
 [Back to top⤴️](#table-of-contents)
+
+
+
 ---
 
-## Authentication
+## 4. Stage 4: Enterprise State, Styling, Prisma & Drizzle ORM
 
 ### Auth.js (NextAuth.js)
 
@@ -1858,6 +1772,9 @@ export const metadata: Metadata = {
 ```
 
 [Back to top⤴️](#table-of-contents)
+
+
+
 ---
 
 ## Internationalization (i18n)
@@ -1884,7 +1801,16 @@ export default function GreetingPage() {
 
 ---
 
-## Caching
+## 5. Stage 5: Caching Hierarchies, Partial Prerendering (PPR) & Security
+```mermaid
+flowchart TD
+    Req["Incoming HTTP Request"] --> L1["1. Request Memoization (React Component Tree Deduplication)"]
+    L1 -- "Cache Miss" --> L2["2. Data Cache (Persistent fetch() across Users & Requests)"]
+    L2 -- "Cache Miss" --> L3["3. Full Route Cache (Static HTML & RSC Flight Payload on Server)"]
+    L3 -- "Client Nav" --> L4["4. Router Cache (In-Memory Browser Cache during User Session)"]
+    L4 --> Render["Render Output to Screen"]
+```
+
 
 Next.js provides a 4-tier caching architecture:
 
@@ -2112,6 +2038,9 @@ export function AIChatWidget() {
 ```
 
 [Back to top⤴️](#table-of-contents)
+
+
+
 ---
 
 ## Analytics
@@ -2138,7 +2067,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ---
 
-## Testing
+## 6. Stage 6: Automated Testing, Containerization & Microservices
 
 ### Unit and Component Testing with Vitest
 
@@ -2283,6 +2212,9 @@ export class UserService {
 | `clsx` / `tailwind-merge`| Styling | Utility function for constructing conditional class names cleanly |
 
 [Back to top⤴️](#table-of-contents)
+
+
+
 ---
 
 ## Example Projects
@@ -2497,7 +2429,7 @@ Full blueprints featuring multi-tenant routing, Markdown rendering with MDX, Str
 
 ---
 
-## Interview Questions
+## 7. Stage 7: Staff Full-Stack Interview Handbook & Production Cheatsheet
 
 ### Next.js Interview Questions
 
