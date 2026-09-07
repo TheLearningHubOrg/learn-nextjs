@@ -878,6 +878,93 @@ export default function DashboardLayout({
 
 ### Intercepting Routes
 
+#### Complete Parallel & Intercepting Routes Walkthrough
+
+Intercepting routes (`(.)`, `(..)`, `(...)`) allow rendering a modal route within the current layout while preserving full URL shareability and browser back-button navigation:
+
+```
+app/
+├── @modal/
+│   ├── (.)photos/[id]/
+│   │   └── page.tsx        <-- Intercepted modal route
+│   └── default.tsx         <-- Fallback slot returning null
+├── photos/
+│   └── [id]/
+│       └── page.tsx        <-- Fallback page on hard refresh (F5)
+├── layout.tsx              <-- Renders {children} and {modal}
+└── page.tsx                <-- Main photo feed
+```
+
+**`app/layout.tsx`**:
+```tsx
+import React from 'react';
+
+export default function RootLayout({
+  children,
+  modal,
+}: {
+  children: React.ReactNode;
+  modal: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body className="bg-slate-950 text-slate-100 min-h-screen">
+        <main className="container mx-auto p-6">{children}</main>
+        {modal}
+      </body>
+    </html>
+  );
+}
+```
+
+**`app/@modal/default.tsx`**:
+```tsx
+export default function DefaultModalSlot() {
+  return null;
+}
+```
+
+**`app/@modal/(.)photos/[id]/page.tsx`**:
+```tsx
+'use client';
+
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+
+export default function PhotoModal({ params }: { params: { id: string } }) {
+  const router = useRouter();
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={() => router.back()}
+    >
+      <div 
+        className="relative max-w-xl w-full bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button 
+          onClick={() => router.back()}
+          className="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl font-bold"
+        >
+          &times;
+        </button>
+        <h3 className="text-xl font-bold mb-4">Photo Preview #{params.id}</h3>
+        <div className="relative w-full h-72 rounded-lg overflow-hidden">
+          <Image 
+            src={`https://picsum.photos/id/${params.id}/800/600`}
+            alt={`Photo ${params.id}`}
+            fill
+            className="object-cover"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+
 Load a route within the current layout while displaying a modal overlay, using conventions like `(.)photo/[id]`.
 
 [Back to top⤴️](#table-of-contents)
@@ -1337,6 +1424,118 @@ export default async function ProductView({ params }: { params: Promise<{ id: st
 
 ### Forms & Mutations
 
+#### Production Server Action with Zod Validation & Optimistic Mutation
+
+```tsx
+// app/actions/create-post.ts
+'use server';
+
+import { z } from 'zod';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { redirect } from 'next/navigation';
+
+const PostSchema = z.object({
+  title: z.string().trim().min(5, 'Title must contain at least 5 characters'),
+  content: z.string().trim().min(20, 'Content must contain at least 20 characters'),
+  category: z.enum(['tech', 'design', 'business']),
+});
+
+export type PostFormState = {
+  errors?: {
+    title?: string[];
+    content?: string[];
+    category?: string[];
+    _form?: string[];
+  };
+  success?: boolean;
+};
+
+export async function createPostAction(
+  prevState: PostFormState,
+  formData: FormData
+): Promise<PostFormState> {
+  const parsed = PostSchema.safeParse({
+    title: formData.get('title'),
+    content: formData.get('content'),
+    category: formData.get('category'),
+  });
+
+  if (!parsed.success) {
+    return {
+      errors: parsed.error.flatten().fieldErrors,
+      success: false,
+    };
+  }
+
+  try {
+    // Database write operation
+    console.log('Writing validated post to database:', parsed.data);
+    await new Promise((res) => setTimeout(res, 500));
+
+    // Clear stale Next.js cache layers
+    revalidatePath('/posts');
+    revalidateTag('posts-list');
+  } catch (err) {
+    return {
+      errors: { _form: ['Internal server error saving post. Please retry.'] },
+      success: false,
+    };
+  }
+
+  redirect('/posts');
+}
+```
+
+**Client Component Consumer (`app/posts/new/page.tsx`)**:
+```tsx
+'use client';
+
+import { useActionState } from 'react';
+import { createPostAction, type PostFormState } from '@/app/actions/create-post';
+
+const initialState: PostFormState = { errors: {}, success: false };
+
+export function CreatePostForm() {
+  const [state, formAction, isPending] = useActionState(createPostAction, initialState);
+
+  return (
+    <form action={formAction} className="max-w-md space-y-4 p-6 bg-slate-900 rounded-xl border border-slate-800">
+      <div>
+        <label className="block text-sm font-medium mb-1">Title</label>
+        <input name="title" disabled={isPending} className="w-full p-2 bg-slate-800 border rounded" />
+        {state.errors?.title && <p className="text-red-400 text-xs mt-1">{state.errors.title[0]}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Content</label>
+        <textarea name="content" rows={4} disabled={isPending} className="w-full p-2 bg-slate-800 border rounded" />
+        {state.errors?.content && <p className="text-red-400 text-xs mt-1">{state.errors.content[0]}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Category</label>
+        <select name="category" disabled={isPending} className="w-full p-2 bg-slate-800 border rounded">
+          <option value="tech">Technology</option>
+          <option value="design">Design</option>
+          <option value="business">Business</option>
+        </select>
+      </div>
+
+      {state.errors?._form && <p className="text-red-400 text-sm">{state.errors._form[0]}</p>}
+
+      <button 
+        type="submit" 
+        disabled={isPending}
+        className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-medium disabled:opacity-50"
+      >
+        {isPending ? 'Publishing...' : 'Publish Post'}
+      </button>
+    </form>
+  );
+}
+```
+
+
 Server Actions are asynchronous functions that execute securely on the server, invokable directly from forms:
 
 ```tsx
@@ -1449,6 +1648,51 @@ export function ValidatedSignupForm() {
 
 ### Route Handlers
 
+#### Complete Server-Sent Events (SSE) Route Handler
+
+```ts
+// app/api/events/route.ts
+import { NextRequest } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      for (let i = 1; i <= 5; i++) {
+        const payload = JSON.stringify({
+          iteration: i,
+          serverTimestamp: Date.now(),
+          status: 'in-progress'
+        });
+
+        controller.enqueue(encoder.encode(`data: ${payload}
+
+`));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      controller.enqueue(encoder.encode(`event: done
+data: {"status": "finished"}
+
+`));
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    },
+  });
+}
+```
+
+
 Route Handlers are defined in `route.ts` files and support standard Web Request and Response APIs:
 
 ```ts
@@ -1476,6 +1720,49 @@ export async function POST(request: Request) {
 ---
 
 ## Middleware
+
+#### Production Edge Middleware with JWT Auth, Geo-Routing & Security Headers
+
+```ts
+// middleware.ts
+import { NextResponse, type NextRequest } from 'next/server';
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const sessionToken = request.cookies.get('app_session')?.value;
+
+  // 1. Guard protected admin/dashboard routes
+  if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) {
+    if (!sessionToken) {
+      const loginRedirect = new URL('/login', request.url);
+      loginRedirect.searchParams.set('redirect_to', pathname);
+      return NextResponse.redirect(loginRedirect);
+    }
+  }
+
+  // 2. Clone response and inject security headers
+  const response = NextResponse.next();
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+  // 3. Inject country geolocation code
+  const userCountry = request.geo?.country || 'US';
+  response.headers.set('x-user-country', userCountry);
+
+  return response;
+}
+
+export const config = {
+  matcher: [
+    '/dashboard/:path*',
+    '/admin/:path*',
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
+};
+```
+
 
 Middleware executes before a request is completed, enabling authentication verification, rewrites, and security headers:
 
