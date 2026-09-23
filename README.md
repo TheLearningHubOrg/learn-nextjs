@@ -29,283 +29,7 @@ Master the App Router, React Server Components (RSC), Server Actions, Partial Pr
 
 ---
 
-## 29. Storybook 8, GraphQL Apollo Client, PostgreSQL Full-Text Search & Analytics
-
-### 29.1 Storybook 8 & Component-Driven Development (CSF 3.0)
-Storybook isolates UI component logic, accessibility testing, and visual regression from backend databases.
-
-```tsx
-// components/Button.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react';
-import { Button } from './Button';
-import { expect, userEvent, within } from '@storybook/test';
-
-const meta: Meta<typeof Button> = {
-  title: 'Enterprise Primitives/Button',
-  component: Button,
-  tags: ['autodocs'],
-  argTypes: {
-    variant: {
-      control: 'select',
-      options: ['primary', 'secondary', 'outline', 'destructive'],
-    },
-    size: {
-      control: 'radio',
-      options: ['sm', 'md', 'lg'],
-    },
-  },
-};
-export default meta;
-
-type Story = StoryObj<typeof Button>;
-
-export const Primary: Story = {
-  args: {
-    variant: 'primary',
-    size: 'md',
-    children: 'Deploy Application',
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const button = canvas.getByRole('button', { name: /deploy application/i });
-    await expect(button).toBeInTheDocument();
-    await userEvent.click(button);
-  },
-};
-
-export const Destructive: Story = {
-  args: {
-    variant: 'destructive',
-    size: 'md',
-    children: 'Delete Cluster',
-  },
-};
-```
-
----
-
-### 29.2 GraphQL Apollo Client Integration with React Server Components
-```tsx
-// lib/graphql/client.ts - Apollo Client for Next.js 15 RSC
-import { HttpLink } from '@apollo/client';
-import {
-  registerApolloClient,
-  ApolloClient,
-  InMemoryCache,
-} from '@apollo/experimental-nextjs-app-support';
-
-export const { getClient } = registerApolloClient(() => {
-  return new ApolloClient({
-    cache: new InMemoryCache(),
-    link: new HttpLink({
-      uri: process.env.GRAPHQL_API_ENDPOINT,
-      headers: {
-        Authorization: `Bearer ${process.env.INTERNAL_SERVICE_KEY}`,
-      },
-    }),
-  });
-});
-```
-
-#### Executing Typed Queries in Server Components
-```tsx
-// app/dashboard/teams/page.tsx
-import React from 'react';
-import { getClient } from '@/lib/graphql/client';
-import { gql } from '@apollo/client';
-
-const GET_TEAMS_QUERY = gql`
-  query GetEnterpriseTeams {
-    teams {
-      id
-      name
-      seatCount
-      createdAt
-    }
-  }
-`;
-
-export default async function TeamsPage() {
-  const { data } = await getClient().query({
-    query: GET_TEAMS_QUERY,
-    context: {
-      fetchOptions: {
-        next: { tags: ['teams-data'], revalidate: 300 },
-      },
-    },
-  });
-
-  return (
-    <div className="p-8 space-y-4">
-      <h1 className="text-2xl font-bold">Enterprise Teams</h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {data.teams.map((team: any) => (
-          <div key={team.id} className="p-4 border rounded-xl shadow-sm bg-white dark:bg-slate-900">
-            <h3 className="font-bold">{team.name}</h3>
-            <p className="text-sm text-slate-500">Seats: {team.seatCount}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-```
-
----
-
-### 29.3 Production PostgreSQL Full-Text Search (FTS) Pipeline
-Full-text search in PostgreSQL provides fast, zero-dependency search with stemming, dictionary ranking, and headline highlighting:
-
-```sql
--- PostgreSQL Full-Text Search Schema & Indexing
-ALTER TABLE articles ADD COLUMN tsv_content tsvector 
-  GENERATED ALWAYS AS (to_tsvector('english', coalesce(title, '') || ' ' || coalesce(body, ''))) STORED;
-
-CREATE INDEX idx_articles_fts ON articles USING GIN(tsv_content);
-
--- Search Query with Stemming & Headline Snippets
-SELECT 
-    id, 
-    title,
-    ts_rank(tsv_content, websearch_to_tsquery('english', 'kubernetes deployment')) AS rank,
-    ts_headline('english', body, websearch_to_tsquery('english', 'kubernetes deployment'), 
-                'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15') AS snippet
-FROM articles
-WHERE tsv_content @@ websearch_to_tsquery('english', 'kubernetes deployment')
-ORDER BY rank DESC
-LIMIT 10;
-```
-
-#### Search Component with Debounced URL Query Synchronization
-```tsx
-'use client';
-
-import React, { useTransition } from 'react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { useDebounce } from '@/hooks/useDebounce';
-
-export function SearchInput({ placeholder }: { placeholder: string }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
-
-  const handleSearch = (term: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (term.trim()) {
-      params.set('q', term);
-    } else {
-      params.delete('q');
-    }
-
-    startTransition(() => {
-      // Replace URL search params without triggering full page re-render
-      router.replace(`${pathname}?${params.toString()}`);
-    });
-  };
-
-  return (
-    <div className="relative max-w-md w-full">
-      <input
-        type="search"
-        defaultValue={searchParams.get('q') || ''}
-        placeholder={placeholder}
-        onChange={(e) => handleSearch(e.target.value)}
-        className="w-full px-4 py-2 pl-10 border rounded-xl dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500"
-      />
-      <span className="absolute left-3 top-2.5 text-slate-400">🔍</span>
-      {isPending && <span className="absolute right-3 top-2.5 animate-spin text-xs">⏳</span>}
-    </div>
-  );
-}
-```
-
----
-
-### 29.4 Privacy-First Analytics & GDPR/CCPA Consent Management Engine
-```tsx
-'use client';
-
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-type ConsentStatus = 'granted' | 'denied' | 'pending';
-
-interface ConsentContextType {
-  consent: ConsentStatus;
-  grantConsent: () => void;
-  denyConsent: () => void;
-}
-
-const ConsentContext = createContext<ConsentContextType | null>(null);
-
-export function CookieConsentProvider({ children }: { children: ReactNode }) {
-  const [consent, setConsent] = useState<ConsentStatus>('pending');
-
-  useEffect(() => {
-    const stored = localStorage.getItem('gdpr_consent') as ConsentStatus | null;
-    if (stored) setConsent(stored);
-  }, []);
-
-  const grantConsent = () => {
-    localStorage.setItem('gdpr_consent', 'granted');
-    setConsent('granted');
-    // Enable tracking scripts dynamically
-    if (typeof window !== 'undefined' && (window as any).posthog) {
-      (window as any).posthog.opt_in_capturing();
-    }
-  };
-
-  const denyConsent = () => {
-    localStorage.setItem('gdpr_consent', 'denied');
-    setConsent('denied');
-    if (typeof window !== 'undefined' && (window as any).posthog) {
-      (window as any).posthog.opt_out_capturing();
-    }
-  };
-
-  return (
-    <ConsentContext.Provider value={{ consent, grantConsent, denyConsent }}>
-      {children}
-      {consent === 'pending' && (
-        <aside
-          role="region"
-          aria-label="Cookie consent banner"
-          className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 z-50 max-w-md p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl space-y-4"
-        >
-          <h4 className="font-bold text-base">Privacy & Cookie Choices</h4>
-          <p className="text-xs text-slate-500 leading-relaxed">
-            We use cookies to analyze site traffic and enhance our developer services. In compliance with GDPR and CCPA, you may choose to opt in or opt out.
-          </p>
-          <div className="flex gap-3 justify-end">
-            <button
-              onClick={denyConsent}
-              className="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
-            >
-              Decline Optional
-            </button>
-            <button
-              onClick={grantConsent}
-              className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
-            >
-              Accept All
-            </button>
-          </div>
-        </aside>
-      )}
-    </ConsentContext.Provider>
-  );
-}
-
-export const useConsent = () => {
-  const ctx = useContext(ConsentContext);
-  if (!ctx) throw new Error('useConsent must be within CookieConsentProvider');
-  return ctx;
-};
-```
-
----
-
-## 30. Complete Master Table of Contents
+## 📋 Master Table of Contents
 
 - [1. Stage 1: Absolute Beginner Foundations & React Essentials](#1-stage-1-absolute-beginner-foundations--react-essentials)
   - [React Essentials & Fiber Fundamentals](#react-essentials)
@@ -9229,9 +8953,285 @@ graph TD
 
 ---
 
-## 31. Production Subsystem Blueprints, Floating UI Primitives & Incident Runbooks
+## 29. Storybook 8, GraphQL Apollo Client, PostgreSQL Full-Text Search & Analytics
 
-### 31.1 Generic HMAC-SHA256 Webhook Verification Engine
+### 29.1 Storybook 8 & Component-Driven Development (CSF 3.0)
+Storybook isolates UI component logic, accessibility testing, and visual regression from backend databases.
+
+```tsx
+// components/Button.stories.tsx
+import type { Meta, StoryObj } from '@storybook/react';
+import { Button } from './Button';
+import { expect, userEvent, within } from '@storybook/test';
+
+const meta: Meta<typeof Button> = {
+  title: 'Enterprise Primitives/Button',
+  component: Button,
+  tags: ['autodocs'],
+  argTypes: {
+    variant: {
+      control: 'select',
+      options: ['primary', 'secondary', 'outline', 'destructive'],
+    },
+    size: {
+      control: 'radio',
+      options: ['sm', 'md', 'lg'],
+    },
+  },
+};
+export default meta;
+
+type Story = StoryObj<typeof Button>;
+
+export const Primary: Story = {
+  args: {
+    variant: 'primary',
+    size: 'md',
+    children: 'Deploy Application',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const button = canvas.getByRole('button', { name: /deploy application/i });
+    await expect(button).toBeInTheDocument();
+    await userEvent.click(button);
+  },
+};
+
+export const Destructive: Story = {
+  args: {
+    variant: 'destructive',
+    size: 'md',
+    children: 'Delete Cluster',
+  },
+};
+```
+
+---
+
+### 29.2 GraphQL Apollo Client Integration with React Server Components
+```tsx
+// lib/graphql/client.ts - Apollo Client for Next.js 15 RSC
+import { HttpLink } from '@apollo/client';
+import {
+  registerApolloClient,
+  ApolloClient,
+  InMemoryCache,
+} from '@apollo/experimental-nextjs-app-support';
+
+export const { getClient } = registerApolloClient(() => {
+  return new ApolloClient({
+    cache: new InMemoryCache(),
+    link: new HttpLink({
+      uri: process.env.GRAPHQL_API_ENDPOINT,
+      headers: {
+        Authorization: `Bearer ${process.env.INTERNAL_SERVICE_KEY}`,
+      },
+    }),
+  });
+});
+```
+
+#### Executing Typed Queries in Server Components
+```tsx
+// app/dashboard/teams/page.tsx
+import React from 'react';
+import { getClient } from '@/lib/graphql/client';
+import { gql } from '@apollo/client';
+
+const GET_TEAMS_QUERY = gql`
+  query GetEnterpriseTeams {
+    teams {
+      id
+      name
+      seatCount
+      createdAt
+    }
+  }
+`;
+
+export default async function TeamsPage() {
+  const { data } = await getClient().query({
+    query: GET_TEAMS_QUERY,
+    context: {
+      fetchOptions: {
+        next: { tags: ['teams-data'], revalidate: 300 },
+      },
+    },
+  });
+
+  return (
+    <div className="p-8 space-y-4">
+      <h1 className="text-2xl font-bold">Enterprise Teams</h1>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {data.teams.map((team: any) => (
+          <div key={team.id} className="p-4 border rounded-xl shadow-sm bg-white dark:bg-slate-900">
+            <h3 className="font-bold">{team.name}</h3>
+            <p className="text-sm text-slate-500">Seats: {team.seatCount}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+### 29.3 Production PostgreSQL Full-Text Search (FTS) Pipeline
+Full-text search in PostgreSQL provides fast, zero-dependency search with stemming, dictionary ranking, and headline highlighting:
+
+```sql
+-- PostgreSQL Full-Text Search Schema & Indexing
+ALTER TABLE articles ADD COLUMN tsv_content tsvector 
+  GENERATED ALWAYS AS (to_tsvector('english', coalesce(title, '') || ' ' || coalesce(body, ''))) STORED;
+
+CREATE INDEX idx_articles_fts ON articles USING GIN(tsv_content);
+
+-- Search Query with Stemming & Headline Snippets
+SELECT 
+    id, 
+    title,
+    ts_rank(tsv_content, websearch_to_tsquery('english', 'kubernetes deployment')) AS rank,
+    ts_headline('english', body, websearch_to_tsquery('english', 'kubernetes deployment'), 
+                'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15') AS snippet
+FROM articles
+WHERE tsv_content @@ websearch_to_tsquery('english', 'kubernetes deployment')
+ORDER BY rank DESC
+LIMIT 10;
+```
+
+#### Search Component with Debounced URL Query Synchronization
+```tsx
+'use client';
+
+import React, { useTransition } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useDebounce } from '@/hooks/useDebounce';
+
+export function SearchInput({ placeholder }: { placeholder: string }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+
+  const handleSearch = (term: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (term.trim()) {
+      params.set('q', term);
+    } else {
+      params.delete('q');
+    }
+
+    startTransition(() => {
+      // Replace URL search params without triggering full page re-render
+      router.replace(`${pathname}?${params.toString()}`);
+    });
+  };
+
+  return (
+    <div className="relative max-w-md w-full">
+      <input
+        type="search"
+        defaultValue={searchParams.get('q') || ''}
+        placeholder={placeholder}
+        onChange={(e) => handleSearch(e.target.value)}
+        className="w-full px-4 py-2 pl-10 border rounded-xl dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500"
+      />
+      <span className="absolute left-3 top-2.5 text-slate-400">🔍</span>
+      {isPending && <span className="absolute right-3 top-2.5 animate-spin text-xs">⏳</span>}
+    </div>
+  );
+}
+```
+
+---
+
+### 29.4 Privacy-First Analytics & GDPR/CCPA Consent Management Engine
+```tsx
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+
+type ConsentStatus = 'granted' | 'denied' | 'pending';
+
+interface ConsentContextType {
+  consent: ConsentStatus;
+  grantConsent: () => void;
+  denyConsent: () => void;
+}
+
+const ConsentContext = createContext<ConsentContextType | null>(null);
+
+export function CookieConsentProvider({ children }: { children: ReactNode }) {
+  const [consent, setConsent] = useState<ConsentStatus>('pending');
+
+  useEffect(() => {
+    const stored = localStorage.getItem('gdpr_consent') as ConsentStatus | null;
+    if (stored) setConsent(stored);
+  }, []);
+
+  const grantConsent = () => {
+    localStorage.setItem('gdpr_consent', 'granted');
+    setConsent('granted');
+    // Enable tracking scripts dynamically
+    if (typeof window !== 'undefined' && (window as any).posthog) {
+      (window as any).posthog.opt_in_capturing();
+    }
+  };
+
+  const denyConsent = () => {
+    localStorage.setItem('gdpr_consent', 'denied');
+    setConsent('denied');
+    if (typeof window !== 'undefined' && (window as any).posthog) {
+      (window as any).posthog.opt_out_capturing();
+    }
+  };
+
+  return (
+    <ConsentContext.Provider value={{ consent, grantConsent, denyConsent }}>
+      {children}
+      {consent === 'pending' && (
+        <aside
+          role="region"
+          aria-label="Cookie consent banner"
+          className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 z-50 max-w-md p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl space-y-4"
+        >
+          <h4 className="font-bold text-base">Privacy & Cookie Choices</h4>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            We use cookies to analyze site traffic and enhance our developer services. In compliance with GDPR and CCPA, you may choose to opt in or opt out.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={denyConsent}
+              className="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
+              Decline Optional
+            </button>
+            <button
+              onClick={grantConsent}
+              className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+            >
+              Accept All
+            </button>
+          </div>
+        </aside>
+      )}
+    </ConsentContext.Provider>
+  );
+}
+
+export const useConsent = () => {
+  const ctx = useContext(ConsentContext);
+  if (!ctx) throw new Error('useConsent must be within CookieConsentProvider');
+  return ctx;
+};
+```
+
+---
+
+## 30. Production Subsystem Blueprints, Floating UI Primitives & Incident Runbooks
+
+### 30.1 Generic HMAC-SHA256 Webhook Verification Engine
 Securing incoming webhooks from external providers (Stripe, GitHub, Shopify, Clerk) requires constant-time cryptographic verification of HMAC-SHA256 signatures:
 
 ```ts
@@ -9294,7 +9294,7 @@ export function verifyHmacSha256Signature({
 
 ---
 
-### 31.2 BullMQ Distributed Background Worker Process (`workers/email.worker.ts`)
+### 30.2 BullMQ Distributed Background Worker Process (`workers/email.worker.ts`)
 ```ts
 import { Worker, Queue, Job } from 'bullmq';
 import { Redis } from 'ioredis';
@@ -9350,7 +9350,7 @@ emailWorker.on('failed', (job, err) => {
 
 ---
 
-### 31.3 Accessible Floating UI Tooltip Primitive (`components/Tooltip.tsx`)
+### 30.3 Accessible Floating UI Tooltip Primitive (`components/Tooltip.tsx`)
 ```tsx
 'use client';
 
@@ -9426,7 +9426,7 @@ export function Tooltip({ content, children, delayMs = 300 }: TooltipProps) {
 
 ---
 
-### 31.4 Production Incident Response Runbook & Post-Mortem Template
+### 30.4 Production Incident Response Runbook & Post-Mortem Template
 
 #### Incident Severity Levels
 
@@ -9464,9 +9464,9 @@ Between 14:02 UTC and 14:16 UTC, incoming traffic to the enterprise checkout rou
 
 ---
 
-## 32. Advanced Subsystems: Stripe Lifecycle, Resumable Uploads & Lighthouse CI
+## 31. Advanced Subsystems: Stripe Lifecycle, Resumable Uploads & Lighthouse CI
 
-### 32.1 Stripe Subscriptions & Customer Portal Full Lifecycle Engine
+### 31.1 Stripe Subscriptions & Customer Portal Full Lifecycle Engine
 Managing SaaS billing requires orchestrating plan changes, proration, customer portal redirects, and webhook synchronization.
 
 ```mermaid
@@ -9514,7 +9514,7 @@ export async function POST() {
 
 ---
 
-### 32.2 Client-Side Image Pre-Processing & Chunked Resumable Uploads
+### 31.2 Client-Side Image Pre-Processing & Chunked Resumable Uploads
 Before uploading multi-megabyte images to cloud storage, compressing and cropping on the client browser saves bandwidth and reduces cloud storage bills:
 
 ```tsx
@@ -9579,7 +9579,7 @@ export function ClientImageCompressor({ onReady }: { onReady: (blob: Blob) => vo
 
 ---
 
-### 32.3 Accessible WAI-ARIA APG Data Grid Component
+### 31.3 Accessible WAI-ARIA APG Data Grid Component
 ```tsx
 'use client';
 
@@ -9663,7 +9663,7 @@ export function AccessibleDataGrid({ data }: { data: RowData[] }) {
 
 ---
 
-### 32.4 Automated Lighthouse CI Quality Gate (`lighthouserc.js`)
+### 31.4 Automated Lighthouse CI Quality Gate (`lighthouserc.js`)
 Enforce performance, accessibility, SEO, and security budgets in continuous integration before merging code into main:
 
 ```javascript
@@ -9701,9 +9701,9 @@ module.exports = {
 
 ---
 
-## 33. Production Disaster Recovery, Database Branching & Cost Optimization
+## 32. Production Disaster Recovery, Database Branching & Cost Optimization
 
-### 33.1 Database Branching Workflows for Ephemeral Preview Environments
+### 32.1 Database Branching Workflows for Ephemeral Preview Environments
 In modern continuous deployment with Vercel and Neon/Supabase, every pull request can spin up an isolated, copy-on-write database branch in sub-second time:
 
 ```mermaid
@@ -9748,7 +9748,7 @@ jobs:
 
 ---
 
-### 33.2 Enterprise Disaster Recovery: RPO, RTO & Point-In-Time Recovery (PITR)
+### 32.2 Enterprise Disaster Recovery: RPO, RTO & Point-In-Time Recovery (PITR)
 
 | Recovery Metric | Enterprise Target | Technical Strategy |
 | :--- | :--- | :--- |
@@ -9766,7 +9766,7 @@ jobs:
 
 ---
 
-### 33.3 Production Serverless Cost Optimization & Resource Tuning
+### 32.3 Production Serverless Cost Optimization & Resource Tuning
 Deploying full-stack Next.js at scale requires tuning image cache TTLs, edge functions, and database connection pooling to avoid unexpected billing spikes:
 
 1. **Optimize `next/image` Transformation Bills**:
@@ -9797,9 +9797,9 @@ Deploying full-stack Next.js at scale requires tuning image cache TTLs, edge fun
 
 ---
 
-## 34. Master Full-Stack Architectural Decision Matrices
+## 33. Master Full-Stack Architectural Decision Matrices
 
-### 34.1 Full-Stack Framework Comparison Matrix
+### 33.1 Full-Stack Framework Comparison Matrix
 
 | Dimension | Next.js 15 (App Router) | React Router 7 / Remix | Astro | Vite + React 19 (SPA) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -9811,7 +9811,7 @@ Deploying full-stack Next.js at scale requires tuning image cache TTLs, edge fun
 
 ---
 
-### 34.2 Node.js ORMs & Query Builders Decision Matrix
+### 33.2 Node.js ORMs & Query Builders Decision Matrix
 
 | Dimension | Drizzle ORM | Prisma ORM | Kysely | TypeORM |
 | :--- | :--- | :--- | :--- | :--- |
@@ -9823,7 +9823,7 @@ Deploying full-stack Next.js at scale requires tuning image cache TTLs, edge fun
 
 ---
 
-### 34.3 Modern Authentication Providers Comparison
+### 33.3 Modern Authentication Providers Comparison
 
 | Provider | Open Source / Self-Hosted | Passkeys / WebAuthn | Database Adapter | Optimal Use-Case |
 | :--- | :--- | :--- | :--- | :--- |
@@ -9834,7 +9834,7 @@ Deploying full-stack Next.js at scale requires tuning image cache TTLs, edge fun
 
 ---
 
-### 34.4 Modern Styling Systems Trade-Off Matrix
+### 33.4 Modern Styling Systems Trade-Off Matrix
 
 | Styling System | Runtime Overhead | Zero-JS CSS Output | Colocation with Components | Optimal Use-Case |
 | :--- | :--- | :--- | :--- | :--- |
@@ -9845,7 +9845,7 @@ Deploying full-stack Next.js at scale requires tuning image cache TTLs, edge fun
 
 ---
 
-### 34.5 Deployment Target Decision Matrix
+### 33.5 Deployment Target Decision Matrix
 
 | Platform | Compute Model | Global Edge Anycast | Database Integration | Pricing Model |
 | :--- | :--- | :--- | :--- | :--- |
@@ -9856,7 +9856,7 @@ Deploying full-stack Next.js at scale requires tuning image cache TTLs, edge fun
 
 ---
 
-### 34.6 Database Selection Architecture Matrix
+### 33.6 Database Selection Architecture Matrix
 
 | Database Engine | Data Model | ACID Compliance | Horizontal Scalability | Optimal Workload |
 | :--- | :--- | :--- | :--- | :--- |
@@ -9869,9 +9869,9 @@ Deploying full-stack Next.js at scale requires tuning image cache TTLs, edge fun
 
 ---
 
-## 35. Enterprise Production Launch Checklist & Engineering Principles
+## 34. Enterprise Production Launch Checklist & Engineering Principles
 
-### 35.1 Pre-Flight Security & Reliability Quality Gate
+### 34.1 Pre-Flight Security & Reliability Quality Gate
 
 ```mermaid
 graph TD
@@ -9919,7 +9919,7 @@ graph TD
 
 ---
 
-### 35.2 Staff Full-Stack Engineering Principles
+### 34.2 Staff Full-Stack Engineering Principles
 
 1. **Prefer Unidirectional Data Flow Over Two-Way Binding**: State flows down; events and actions trigger mutations upward.
 2. **Move Compute as Close to the Data as Possible**: Execute heavy queries in Server Components directly against co-located database replicas rather than making serial client round-trips.
@@ -9931,9 +9931,9 @@ graph TD
 
 ---
 
-## 36. Engineering Contribution Standards & Quality Assurance
+## 35. Engineering Contribution Standards & Quality Assurance
 
-### 36.1 Conventional Commit Standards
+### 35.1 Conventional Commit Standards
 All contributions to enterprise full-stack repositories must adhere to the Conventional Commits specification:
 
 | Commit Type | Purpose | Example |
@@ -9948,7 +9948,7 @@ All contributions to enterprise full-stack repositories must adhere to the Conve
 
 ---
 
-### 36.2 Pull Request Quality Gates Checklist
+### 35.2 Pull Request Quality Gates Checklist
 
 ```markdown
 ### PR Verification Checklist
@@ -9964,7 +9964,7 @@ All contributions to enterprise full-stack repositories must adhere to the Conve
 
 ---
 
-### 36.3 Final Masterclass Accreditation & Staff Certification
+### 35.3 Final Masterclass Accreditation & Staff Certification
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════════════════════╗
@@ -9982,7 +9982,7 @@ All contributions to enterprise full-stack repositories must adhere to the Conve
 
 ---
 
-### 36.4 Community & Ongoing Maintenance
+### 35.4 Community & Ongoing Maintenance
 The full-stack landscape evolves rapidly. This masterclass is maintained continuously against the latest canary and stable releases of Next.js 15, React 19, Drizzle, and Prisma.
 
 * **Issue Tracker**: Submit architectural suggestions and bug reports on GitHub.
@@ -9997,7 +9997,7 @@ Status: Active Maintenance & Verified for Next.js 15.2+ and React 19 Stable
 
 ---
 
-### 36.5 Key Architecture Principles Summary
+### 35.5 Key Architecture Principles Summary
 1. **Zero-Trust Network Isolation**: Never expose raw database endpoints or internal service keys to client bundles.
 2. **Deterministic State Mutations**: Form actions and Server Functions must be idempotent and transactional.
 3. **Progressive Enhancement First**: Always provide functional HTML fallbacks before JavaScript hydrates.
@@ -10010,7 +10010,7 @@ End of Masterclass. Happy Engineering! 🚀
 
 ---
 
-### 36.6 Staff Engineer Axioms for Next.js & React 19
+## 36. Staff Engineer Axioms for Next.js & React 19
 1. **Network Boundaries Define Safety**: The 'use server' and 'use client' boundary markers are network isolation points. Never pass sensitive configuration tokens or unparsed client inputs across boundary edges.
 2. **Deterministic Revalidation Over Ad-Hoc Invalidation**: Rely on granular 
 evalidateTag and domain-driven tag hierarchies rather than broad path sweeps to maintain cache consistency across globally distributed edge caches.
