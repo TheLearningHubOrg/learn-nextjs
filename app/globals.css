@@ -14,9 +14,6 @@ body {
     Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   margin: 0;
   padding: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
 }
 
@@ -27,6 +24,7 @@ body {
 .container {
   max-width: 1100px;
   width: 100%;
+  margin: 0 auto;
   padding: 3rem 1.5rem;
   text-align: center;
 }
@@ -103,4 +101,73 @@ body {
   margin-top: 4rem;
   color: var(--text-muted);
   font-size: 0.875rem;
+}
+
+a {
+  color: #4da3ff;
+}
+
+.site-header nav {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.site-header a,
+.filters a {
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.site-header a:hover,
+.filters a[aria-current='page'] {
+  text-decoration: underline;
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.topic-list,
+.notes {
+  list-style: none;
+  padding: 0;
+  text-align: left;
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.topic-list li,
+.notes li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.like button,
+.note-form button {
+  padding: 0.4rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.note-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.note-form input {
+  padding: 0.4rem;
+  min-width: 16rem;
 }

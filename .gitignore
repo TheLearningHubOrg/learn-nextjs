@@ -55,3 +55,13 @@ next-env.d.ts
 !.vscode/extensions.json
 !.vscode/mcp.json
 .history/*
+
+# Added from the learning-hub Node template
+.turbo/
+.nuxt/
+out-tsc/
+pnpm-debug.log*
+.env.*
+!.env.example
+*.swp
+Thumbs.db

@@ -1,44 +1,39 @@
 import Link from 'next/link';
+import { LikeButton } from '@/components/like-button';
+import { getTopics } from '@/lib/topics';
 
-export default function Home() {
-  const title = 'learn-nextjs';
+// A Server Component: it runs at build time (this page is static) and ships
+// only HTML for itself. LikeButton is a Client Component island.
+export default function HomePage() {
+  const topics = getTopics();
+  const stages = [...new Set(topics.map((topic) => topic.stage))];
 
   return (
-    <main className="container">
+    <>
       <section className="hero">
-        <h1 className="title">Hello, {title}</h1>
-        <p className="subtitle">Congratulations! Your Next.js 15 App Router app is running. 🎉</p>
+        <h1 className="title">Learn Next.js</h1>
+        <p className="subtitle">
+          A small App Router project that grows with Stages 1 to 3 of the guide.
+        </p>
+        <LikeButton label="Found this useful?" />
       </section>
 
-      <section className="grid">
-        <article className="card">
-          <h2>Next.js Documentation</h2>
-          <p>Explore Server Components, Route Handlers, Server Actions, and Turbopack.</p>
-          <a href="https://nextjs.org/docs" target="_blank" rel="noopener noreferrer">
-            Read Docs &rarr;
-          </a>
-        </article>
-
-        <article className="card">
-          <h2>App Router Architecture</h2>
-          <p>Master layouts, templates, streaming with Suspense, and parallel routes.</p>
-          <a href="https://nextjs.org/docs/app" target="_blank" rel="noopener noreferrer">
-            Explore Architecture &rarr;
-          </a>
-        </article>
-
-        <article className="card">
-          <h2>Testing & Vitest</h2>
-          <p>Fast unit and integration testing with Vitest and React Testing Library.</p>
-          <a href="https://vitest.dev" target="_blank" rel="noopener noreferrer">
-            Learn Testing &rarr;
-          </a>
-        </article>
+      <section className="grid" aria-label="Stages">
+        {stages.map((stage) => (
+          <article className="card" key={stage}>
+            <h2>Stage {stage}</h2>
+            <ul>
+              {topics
+                .filter((topic) => topic.stage === stage)
+                .map((topic) => (
+                  <li key={topic.slug}>
+                    <Link href={`/topics/${topic.slug}`}>{topic.title}</Link>
+                  </li>
+                ))}
+            </ul>
+          </article>
+        ))}
       </section>
-
-      <footer className="footer">
-        <p>Built with modern Next.js, React 19, and TypeScript.</p>
-      </footer>
-    </main>
+    </>
   );
 }

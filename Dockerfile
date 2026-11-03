@@ -1,36 +1,33 @@
-# Multi-stage Dockerfile for Next.js
-FROM node:22-alpine AS base
+# Next.js App Router app, built with output: 'standalone' (see next.config.ts).
+# The runtime image holds server.js, the traced node_modules subset, static
+# assets and public/. It never runs `next dev`.
 
-# Install dependencies only when needed
-FROM base AS deps
+# ---- deps: install from the lockfile once, cached until it changes ---------
+FROM node:24-alpine AS deps
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
 
-# Rebuild the source code only when needed
-FROM base AS builder
+# ---- build: compile, type-check and prerender -------------------------------
+FROM node:24-alpine AS build
 WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-# Production image, copy all the files and run next
-FROM base AS runner
+# ---- runtime ----------------------------------------------------------------
+FROM node:24-alpine AS runtime
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=8080 \
+    HOSTNAME=0.0.0.0
 WORKDIR /app
-
-ENV NODE_ENV=production
-ENV PORT=3000
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-
-USER nextjs
-
-EXPOSE 3000
-
-CMD ["npm", "start"]
+COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+USER node
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
+  CMD wget -qO- "http://127.0.0.1:${PORT}/health" > /dev/null || exit 1
+CMD ["node", "server.js"]
